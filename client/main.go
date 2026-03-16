@@ -6,21 +6,31 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/fatih/color"
 )
 
 const (
-	baseUrl  = "http://localhost:8081"
-	notesUrl = "/notes"
+	defaultBaseURL = "http://localhost:8081"
+	notesUrl       = "/notes"
 )
+
+var baseURL = getBaseURL()
 
 type NoteInfo struct {
 	Title    string `json:"title"`
-	Context  string `json:"context"`
+	Content  string `json:"content"`
 	Author   string `json:"author"`
-	IsPiblic bool   `json:"is_public"`
+	IsPublic bool   `json:"is_public"`
+}
+
+type NoteInfoPatch struct {
+	Title    *string `json:"title"`
+	Content  *string `json:"content"`
+	Author   *string `json:"author"`
+	IsPublic *bool   `json:"is_public"`
 }
 
 type Note struct {
@@ -33,9 +43,9 @@ type Note struct {
 func createNote() (Note, error) {
 	note := NoteInfo{
 		Title:    "Test note",
-		Context:  "This is a test note",
+		Content:  "This is a test note",
 		Author:   "Test author",
-		IsPiblic: true,
+		IsPublic: true,
 	}
 
 	data, err := json.Marshal(note)
@@ -43,7 +53,7 @@ func createNote() (Note, error) {
 		return Note{}, err
 	}
 
-	resp, err := http.Post(baseUrl+notesUrl, "application/json", bytes.NewBuffer(data))
+	resp, err := http.Post(baseURL+notesUrl, "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		return Note{}, err
 	}
@@ -68,7 +78,7 @@ func createNote() (Note, error) {
 }
 
 func getNote(id int64) (Note, error) {
-	resp, err := http.Get(fmt.Sprintf(baseUrl+notesUrl+"/%d", id))
+	resp, err := http.Get(fmt.Sprintf(baseURL+notesUrl+"/%d", id))
 	if err != nil {
 		return Note{}, err
 	}
@@ -97,7 +107,7 @@ func getNote(id int64) (Note, error) {
 }
 
 func getAllNotes() ([]Note, error) {
-	resp, err := http.Get(baseUrl + notesUrl)
+	resp, err := http.Get(baseURL + notesUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -125,6 +135,132 @@ func getAllNotes() ([]Note, error) {
 	return notes, nil
 }
 
+func updateNote(id int64) (Note, error) {
+	updatedInfo := NoteInfo{
+		Title:    "Updated test note",
+		Content:  "This note was fully replaced",
+		Author:   "Updated author",
+		IsPublic: false,
+	}
+
+	data, err := json.Marshal(updatedInfo)
+	if err != nil {
+		return Note{}, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf(baseURL+notesUrl+"/%d", id), bytes.NewBuffer(data))
+	if err != nil {
+		return Note{}, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return Note{}, err
+	}
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			log.Printf("Failed to close response body: %v", err)
+		}
+	}()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return Note{}, fmt.Errorf("note with id %d not found", id)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return Note{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var note Note
+	if err := json.NewDecoder(resp.Body).Decode(&note); err != nil {
+		return Note{}, err
+	}
+
+	return note, nil
+}
+
+func modifyNote(id int64) (Note, error) {
+	content := "This note was partially updated"
+	patch := NoteInfoPatch{
+		Content: &content,
+	}
+
+	data, err := json.Marshal(patch)
+	if err != nil {
+		return Note{}, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, fmt.Sprintf(baseURL+notesUrl+"/%d", id), bytes.NewBuffer(data))
+	if err != nil {
+		return Note{}, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return Note{}, err
+	}
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			log.Printf("Failed to close response body: %v", err)
+		}
+	}()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return Note{}, fmt.Errorf("note with id %d not found", id)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return Note{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var note Note
+	if err := json.NewDecoder(resp.Body).Decode(&note); err != nil {
+		return Note{}, err
+	}
+
+	return note, nil
+}
+
+func deleteNote(id int64) error {
+	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf(baseURL+notesUrl+"/%d", id), nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			log.Printf("Failed to close response body: %v", err)
+		}
+	}()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("note with id %d not found", id)
+	}
+
+	if resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func getBaseURL() string {
+	if v := os.Getenv("BASE_URL"); v != "" {
+		return v
+	}
+
+	return defaultBaseURL
+}
+
 func main() {
 
 	// Create a note
@@ -149,8 +285,37 @@ func main() {
 		log.Fatal(err)
 	}
 
-	//print notes
 	for _, n := range notes {
 		log.Printf(color.RedString("\tGot note:"), color.GreenString("%+v", n))
+	}
+
+	// update the note
+	note, err = updateNote(note.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf(color.RedString("Updated note:"), color.GreenString("%+v", note))
+
+	// modify the note
+	note, err = modifyNote(note.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf(color.RedString("Modified note:"), color.GreenString("%+v", note))
+
+	// delete the note
+	if err := deleteNote(note.ID); err != nil {
+		log.Fatal(err)
+	}
+	log.Printf(color.RedString("Deleted note with id:"), color.GreenString("%d", note.ID))
+
+	// get all notes again
+	notes, err = getAllNotes()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, n := range notes {
+		log.Printf(color.RedString("\tGot note after delete:"), color.GreenString("%+v", n))
 	}
 }

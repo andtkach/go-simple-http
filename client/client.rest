@@ -9,14 +9,38 @@ Content-Type: application/json
 
 {
 	"title": "First note",
-	"context": "Testing create endpoint",
+	"content": "Testing create endpoint",
 	"author": "Andrii",
 	"is_public": true
 }
 
 
+### Update note (PUT - replace whole note info)
+PUT {{baseUrl}}/notes/1908926024183008884
+Content-Type: application/json
+
+{
+	"title": "Updated note title",
+	"content": "Updated note content",
+	"author": "Andrii Updated",
+	"is_public": false
+}
+
+### Modify note (PATCH - partial update)
+PATCH {{baseUrl}}/notes/1908926024183008884
+Content-Type: application/json
+
+{
+	"content": "Patched note content only"
+}
+
+### Delete note
+DELETE {{baseUrl}}/notes/1908926024183008884
+Accept: application/json
+
+
 ### Get note by id
-GET {{baseUrl}}/notes/706832764964422411
+GET {{baseUrl}}/notes/1908926024183008884
 Accept: application/json
 
 ### Get all notes

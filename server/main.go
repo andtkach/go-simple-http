@@ -28,7 +28,7 @@ const (
 
 type NoteInfo struct {
 	Title    string `json:"title"`
-	Context  string `json:"context"`
+	Content  string `json:"content"`
 	Author   string `json:"author"`
 	IsPublic bool   `json:"is_public"`
 }
@@ -38,6 +38,13 @@ type Note struct {
 	Info      NoteInfo  `json:"info"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type NoteInfoPatch struct {
+	Title    *string `json:"title"`
+	Content  *string `json:"content"`
+	Author   *string `json:"author"`
+	IsPublic *bool   `json:"is_public"`
 }
 
 type SyncMap struct {
@@ -123,6 +130,111 @@ func getAllNotesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println(color.GreenString("Notes retrieved: %+v", len(notesList)))
+}
+
+func updateNoteHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println(color.BlueString("Received request: %s %s", r.Method, r.URL.Path))
+	noteId := chi.URLParam(r, "id")
+	id, err := parseNoteId(noteId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	updatedInfo := &NoteInfo{}
+	if err := json.NewDecoder(r.Body).Decode(updatedInfo); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	notes.m.Lock()
+	defer notes.m.Unlock()
+
+	note, ok := notes.elems[id]
+	if !ok {
+		http.Error(w, "note not found", http.StatusNotFound)
+		return
+	}
+
+	note.Info = *updatedInfo
+	note.UpdatedAt = time.Now()
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(note); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println(color.GreenString("Note updated: %+v", note))
+}
+
+func modifyNoteHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println(color.BlueString("Received request: %s %s", r.Method, r.URL.Path))
+	noteId := chi.URLParam(r, "id")
+	id, err := parseNoteId(noteId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	patch := &NoteInfoPatch{}
+	if err := json.NewDecoder(r.Body).Decode(patch); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	notes.m.Lock()
+	defer notes.m.Unlock()
+
+	note, ok := notes.elems[id]
+	if !ok {
+		http.Error(w, "note not found", http.StatusNotFound)
+		return
+	}
+
+	if patch.Title != nil {
+		note.Info.Title = *patch.Title
+	}
+	if patch.Content != nil {
+		note.Info.Content = *patch.Content
+	}
+	if patch.Author != nil {
+		note.Info.Author = *patch.Author
+	}
+	if patch.IsPublic != nil {
+		note.Info.IsPublic = *patch.IsPublic
+	}
+	note.UpdatedAt = time.Now()
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(note); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println(color.GreenString("Note modified: %+v", note))
+}
+
+func deleteNoteHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println(color.BlueString("Received request: %s %s", r.Method, r.URL.Path))
+	noteId := chi.URLParam(r, "id")
+	id, err := parseNoteId(noteId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	notes.m.Lock()
+	defer notes.m.Unlock()
+
+	if _, ok := notes.elems[id]; !ok {
+		http.Error(w, "note not found", http.StatusNotFound)
+		return
+	}
+
+	delete(notes.elems, id)
+	w.WriteHeader(http.StatusNoContent)
+	log.Println(color.GreenString("Note deleted: id=%d", id))
 }
 
 func parseNoteId(idStr string) (int64, error) {
