@@ -40,11 +40,11 @@ type Note struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func createNote() (Note, error) {
+func createNote(title string, content string) (Note, error) {
 	note := NoteInfo{
-		Title:    "Test note",
-		Content:  "This is a test note",
-		Author:   "Test author",
+		Title:    title,
+		Content:  content,
+		Author:   "Andrii",
 		IsPublic: true,
 	}
 
@@ -135,11 +135,11 @@ func getAllNotes() ([]Note, error) {
 	return notes, nil
 }
 
-func updateNote(id int64) (Note, error) {
+func updateNote(id int64, title string, content string) (Note, error) {
 	updatedInfo := NoteInfo{
-		Title:    "Updated test note",
-		Content:  "This note was fully replaced",
-		Author:   "Updated author",
+		Title:    title,
+		Content:  content,
+		Author:   "Andrii",
 		IsPublic: false,
 	}
 
@@ -263,13 +263,16 @@ func getBaseURL() string {
 
 func main() {
 
+	log.Println("Start notes client")
+
 	// Create a note
-	note, err := createNote()
+	note, err := createNote("Note 1", "This is the content of note 1")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Printf(color.RedString("Created note:"), color.GreenString("%+v", note))
+	log.Printf(color.RedString("Created note with id: %d\t", note.ID), color.GreenString("%+v", note))
+	log.Println()
 
 	// Get the note
 	note, err = getNote(note.ID)
@@ -277,39 +280,46 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Printf(color.RedString("Got note:"), color.GreenString("%+v", note))
+	log.Printf(color.RedString("Got note by id: %d\t", note.ID), color.GreenString("%+v", note))
+	log.Println()
 
 	// Get all notes
+	log.Println(color.RedString("Getting all notes..."))
 	notes, err := getAllNotes()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for _, n := range notes {
-		log.Printf(color.RedString("\tGot note:"), color.GreenString("%+v", n))
+		log.Printf(color.RedString("\tGot note %d:\t", n.ID), color.GreenString("%+v", n))
 	}
+	log.Println()
 
 	// update the note
-	note, err = updateNote(note.ID)
+	note, err = updateNote(note.ID, "Updated Note 1", "This is the updated content of note 1")
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf(color.RedString("Updated note:"), color.GreenString("%+v", note))
+	log.Printf(color.RedString("Updated note:\t"), color.GreenString("%+v", note))
+	log.Println()
 
 	// modify the note
 	note, err = modifyNote(note.ID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf(color.RedString("Modified note:"), color.GreenString("%+v", note))
+	log.Printf(color.RedString("Modified note:\t"), color.GreenString("%+v", note))
+	log.Println()
 
 	// delete the note
 	if err := deleteNote(note.ID); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf(color.RedString("Deleted note with id:"), color.GreenString("%d", note.ID))
+	log.Printf(color.RedString("Deleted note with id: %d\t", note.ID), color.GreenString("%+v", note))
+	log.Println()
 
 	// get all notes again
+	log.Println(color.RedString("Getting all notes again..."))
 	notes, err = getAllNotes()
 	if err != nil {
 		log.Fatal(err)
@@ -318,4 +328,6 @@ func main() {
 	for _, n := range notes {
 		log.Printf(color.RedString("\tGot note after delete:"), color.GreenString("%+v", n))
 	}
+
+	log.Println("Notes client finished")
 }

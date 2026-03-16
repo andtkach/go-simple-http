@@ -67,8 +67,19 @@ func createNoteHandler(w http.ResponseWriter, r *http.Request) {
 	rand.Seed(time.Now().UnixNano())
 	now := time.Now()
 
+	newNoteId := rand.Int63()
+
+	// check I do not have note with such id already, if I do - generate 500 error
+	notes.m.RLock()
+	if _, exists := notes.elems[newNoteId]; exists {
+		notes.m.RUnlock()
+		http.Error(w, "error generating note id", http.StatusInternalServerError)
+		return
+	}
+	notes.m.RUnlock()
+
 	note := &Note{
-		ID:        rand.Int63(),
+		ID:        newNoteId,
 		Info:      *info,
 		CreatedAt: now,
 		UpdatedAt: now,
