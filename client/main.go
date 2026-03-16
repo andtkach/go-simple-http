@@ -34,7 +34,7 @@ type NoteInfoPatch struct {
 }
 
 type Note struct {
-	ID        int64     `json:"id"`
+	Id        int64     `json:"id"`
 	Info      NoteInfo  `json:"info"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -279,16 +279,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Printf(color.RedString("Created note with id: %d\t", note.ID), color.GreenString("%+v", note))
+	log.Printf(color.RedString("Created note with id: %d\t", note.Id), color.GreenString("%+v", note))
 	log.Println()
 
 	// Get the note
-	note, err = getNote(note.ID)
+	note, err = getNote(note.Id)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Printf(color.RedString("Got note by id: %d\t", note.ID), color.GreenString("%+v", note))
+	log.Printf(color.RedString("Got note by id: %d\t", note.Id), color.GreenString("%+v", note))
 	log.Println()
 
 	// Get all notes
@@ -300,12 +300,12 @@ func main() {
 	log.Println(color.RedString("Page %d/%d, limit=%d, total=%d", notesPage.Page, notesPage.TotalPages, notesPage.Limit, notesPage.TotalCount))
 
 	for _, n := range notesPage.Notes {
-		log.Printf(color.RedString("\tGot note %d:\t", n.ID), color.GreenString("%+v", n))
+		log.Printf(color.RedString("\tGot note %d:\t", n.Id), color.GreenString("%+v", n))
 	}
 	log.Println()
 
 	// update the note
-	note, err = updateNote(note.ID, "Updated Note 1", "This is the updated content of note 1")
+	note, err = updateNote(note.Id, "Updated Note 1", "This is the updated content of note 1")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -313,7 +313,7 @@ func main() {
 	log.Println()
 
 	// modify the note
-	note, err = modifyNote(note.ID)
+	note, err = modifyNote(note.Id)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -321,10 +321,10 @@ func main() {
 	log.Println()
 
 	// delete the note
-	if err := deleteNote(note.ID); err != nil {
+	if err := deleteNote(note.Id); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf(color.RedString("Deleted note with id: %d\t", note.ID), color.GreenString("%+v", note))
+	log.Printf(color.RedString("Deleted note with id: %d\t", note.Id), color.GreenString("%+v", note))
 	log.Println()
 
 	// get all notes again

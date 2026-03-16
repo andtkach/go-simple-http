@@ -38,7 +38,7 @@ type NoteInfo struct {
 }
 
 type Note struct {
-	ID        int64     `json:"id"`
+	Id        int64     `json:"id"`
 	Info      NoteInfo  `json:"info"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -91,7 +91,7 @@ func createNoteHandler(w http.ResponseWriter, r *http.Request) {
 	notes.m.RUnlock()
 
 	note := &Note{
-		ID:        newNoteId,
+		Id:        newNoteId,
 		Info:      *info,
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -106,7 +106,7 @@ func createNoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	notes.m.Lock()
 	defer notes.m.Unlock()
-	notes.elems[note.ID] = note
+	notes.elems[note.Id] = note
 	log.Println(color.GreenString("Note created: %+v", note))
 }
 
