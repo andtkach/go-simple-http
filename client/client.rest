@@ -1,0 +1,25 @@
+@host = localhost
+@port = 8081
+@baseUrl = http://{{host}}:{{port}}
+
+### Create note
+# @name createNote
+POST {{baseUrl}}/notes
+Content-Type: application/json
+
+{
+	"title": "First note",
+	"context": "Testing create endpoint",
+	"author": "Andrii",
+	"is_public": true
+}
+
+
+### Get note by id
+GET {{baseUrl}}/notes/706832764964422411
+Accept: application/json
+
+### Get all notes
+GET {{baseUrl}}/notes
+Accept: application/json
+
