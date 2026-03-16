@@ -46,4 +46,16 @@ Accept: application/json
 ### Get all notes
 GET {{baseUrl}}/notes
 Accept: application/json
+# Response shape:
+# {
+#   "notes": [...],
+#   "page": 1,
+#   "limit": 10,
+#   "total_count": 1,
+#   "total_pages": 1
+# }
+
+### Get paginated notes
+GET {{baseUrl}}/notes?page=1&limit=5
+Accept: application/json
 

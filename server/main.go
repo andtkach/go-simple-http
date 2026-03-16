@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -18,6 +20,8 @@ import (
 const (
 	defaultHost    = "localhost"
 	defaultPort    = "8081"
+	defaultPage    = 1
+	defaultLimit   = 10
 	createNoteUrl  = "/notes"
 	getNoteUrl     = "/notes/{id}"
 	getAllNotesUrl = "/notes"
@@ -38,6 +42,14 @@ type Note struct {
 	Info      NoteInfo  `json:"info"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type NotesPage struct {
+	Notes      []Note `json:"notes"`
+	Page       int    `json:"page"`
+	Limit      int    `json:"limit"`
+	TotalCount int    `json:"total_count"`
+	TotalPages int    `json:"total_pages"`
 }
 
 type NoteInfoPatch struct {
@@ -126,21 +138,55 @@ func getNoteHandler(w http.ResponseWriter, r *http.Request) {
 
 func getAllNotesHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println(color.BlueString("Received request: %s %s", r.Method, r.URL.Path))
+	page, limit, err := getPaginationParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	notes.m.RLock()
 	defer notes.m.RUnlock()
 
-	var notesList []Note
+	notesList := make([]Note, 0, len(notes.elems))
 	for _, note := range notes.elems {
 		notesList = append(notesList, *note)
 	}
+	totalCount := len(notesList)
+
+	sort.Slice(notesList, func(i, j int) bool {
+		return notesList[i].CreatedAt.Before(notesList[j].CreatedAt)
+	})
+
+	start := (page - 1) * limit
+	if start >= len(notesList) {
+		notesList = []Note{}
+	} else {
+		end := start + limit
+		if end > len(notesList) {
+			end = len(notesList)
+		}
+		notesList = notesList[start:end]
+	}
+
+	totalPages := 0
+	if totalCount > 0 {
+		totalPages = (totalCount + limit - 1) / limit
+	}
+
+	response := NotesPage{
+		Notes:      notesList,
+		Page:       page,
+		Limit:      limit,
+		TotalCount: totalCount,
+		TotalPages: totalPages,
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(notesList); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Println(color.GreenString("Notes retrieved: %+v", len(notesList)))
+	log.Println(color.GreenString("Notes retrieved: page=%d limit=%d returned=%d total=%d", page, limit, len(notesList), totalCount))
 }
 
 func updateNoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -255,6 +301,28 @@ func parseNoteId(idStr string) (int64, error) {
 	}
 
 	return id, nil
+}
+
+func getPaginationParams(r *http.Request) (int, int, error) {
+	page := defaultPage
+	if pageParam := r.URL.Query().Get("page"); pageParam != "" {
+		parsedPage, err := strconv.Atoi(pageParam)
+		if err != nil || parsedPage < 1 {
+			return 0, 0, fmt.Errorf("page must be a positive integer")
+		}
+		page = parsedPage
+	}
+
+	limit := defaultLimit
+	if limitParam := r.URL.Query().Get("limit"); limitParam != "" {
+		parsedLimit, err := strconv.Atoi(limitParam)
+		if err != nil || parsedLimit < 1 {
+			return 0, 0, fmt.Errorf("limit must be a positive integer")
+		}
+		limit = parsedLimit
+	}
+
+	return page, limit, nil
 }
 
 func getListenAddr() string {

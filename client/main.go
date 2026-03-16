@@ -40,6 +40,14 @@ type Note struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type NotesPage struct {
+	Notes      []Note `json:"notes"`
+	Page       int    `json:"page"`
+	Limit      int    `json:"limit"`
+	TotalCount int    `json:"total_count"`
+	TotalPages int    `json:"total_pages"`
+}
+
 func createNote(title string, content string) (Note, error) {
 	note := NoteInfo{
 		Title:    title,
@@ -106,10 +114,10 @@ func getNote(id int64) (Note, error) {
 	return note, nil
 }
 
-func getAllNotes() ([]Note, error) {
+func getAllNotes() (NotesPage, error) {
 	resp, err := http.Get(baseURL + notesUrl)
 	if err != nil {
-		return nil, err
+		return NotesPage{}, err
 	}
 
 	defer func() {
@@ -120,19 +128,19 @@ func getAllNotes() ([]Note, error) {
 	}()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("notes not found")
+		return NotesPage{}, fmt.Errorf("notes not found")
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return NotesPage{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	var notes []Note
-	if err := json.NewDecoder(resp.Body).Decode(&notes); err != nil {
-		return nil, err
+	var notesPage NotesPage
+	if err := json.NewDecoder(resp.Body).Decode(&notesPage); err != nil {
+		return NotesPage{}, err
 	}
 
-	return notes, nil
+	return notesPage, nil
 }
 
 func updateNote(id int64, title string, content string) (Note, error) {
@@ -285,12 +293,13 @@ func main() {
 
 	// Get all notes
 	log.Println(color.RedString("Getting all notes..."))
-	notes, err := getAllNotes()
+	notesPage, err := getAllNotes()
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println(color.RedString("Page %d/%d, limit=%d, total=%d", notesPage.Page, notesPage.TotalPages, notesPage.Limit, notesPage.TotalCount))
 
-	for _, n := range notes {
+	for _, n := range notesPage.Notes {
 		log.Printf(color.RedString("\tGot note %d:\t", n.ID), color.GreenString("%+v", n))
 	}
 	log.Println()
@@ -320,12 +329,13 @@ func main() {
 
 	// get all notes again
 	log.Println(color.RedString("Getting all notes again..."))
-	notes, err = getAllNotes()
+	notesPage, err = getAllNotes()
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println(color.RedString("Page %d/%d, limit=%d, total=%d", notesPage.Page, notesPage.TotalPages, notesPage.Limit, notesPage.TotalCount))
 
-	for _, n := range notes {
+	for _, n := range notesPage.Notes {
 		log.Printf(color.RedString("\tGot note after delete:"), color.GreenString("%+v", n))
 	}
 
