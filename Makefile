@@ -1,7 +1,8 @@
-.PHONY: help run-server build-server build-client run-client docker-build-server docker-build-client docker-build docker-run-server docker-run-client
+.PHONY: help tidy run-server build-server build-client run-client docker-build-server docker-build-client docker-build docker-run-server docker-run-client
 
 help:
 	@echo Available targets:
+	@echo   make tidy        - Run go mod tidy for server and client
 	@echo   make run-server  - Run the Go server locally
 	@echo   make build-server - Build the Go server binary
 	@echo   make build-client - Build the Go client binary
@@ -11,6 +12,10 @@ help:
 	@echo   make docker-build - Build both Docker images
 	@echo   make docker-run-server - Run the server Docker container
 	@echo   make docker-run-client - Run the client Docker container
+
+tidy:
+	go -C server mod tidy
+	go -C client mod tidy
 
 run-server:
 	go -C server run .
