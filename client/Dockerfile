@@ -17,5 +17,8 @@ WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=builder /out/client /app/client
 
+ENV SERVER_HOST=host.docker.internal
+ENV SERVER_PORT=8081
+
 USER app
 ENTRYPOINT ["/app/client"]

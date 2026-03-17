@@ -1,5 +1,8 @@
 .PHONY: help tidy run-server build-windows-server build-windows-client build-linux-server build-linux-client build-linux run-client docker-build-server docker-build-client docker-build docker-run-server docker-run-client
 
+SERVER_PORT ?= $(shell grep '^PORT=' server/.env | cut -d= -f2)
+SERVER_PORT ?= 8081
+
 help:
 	@echo Available targets:
 	@echo   make tidy        - Run go mod tidy for server and client
@@ -49,7 +52,14 @@ docker-build-client:
 docker-build: docker-build-server docker-build-client
 
 docker-run-server:
-	docker run --rm -p 8081:8081 go-simple-http-server
+	docker run --rm \
+		--env-file ./server/.env \
+		-e HOST=0.0.0.0 \
+		-p $(SERVER_PORT):$(SERVER_PORT) \
+		go-simple-http-server
 
 docker-run-client:
-	docker run --rm -e BASE_URL=http://host.docker.internal:8081 go-simple-http-client
+	docker run --rm \
+		--env-file ./client/.env \
+		-e SERVER_HOST=host.docker.internal \
+		go-simple-http-client

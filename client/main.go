@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -266,10 +268,21 @@ func getBaseURL() string {
 		return v
 	}
 
-	return defaultBaseURL
+	host := os.Getenv("SERVER_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+
+	port := os.Getenv("SERVER_PORT")
+	if port == "" {
+		port = "8081"
+	}
+
+	return "http://" + net.JoinHostPort(host, port)
 }
 
 func main() {
+	_ = godotenv.Load()
 
 	log.Println("Start notes client")
 

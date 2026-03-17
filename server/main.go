@@ -15,6 +15,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/go-chi/chi/v5"
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -340,6 +341,8 @@ func getListenAddr() string {
 }
 
 func main() {
+	_ = godotenv.Load()
+
 	r := chi.NewRouter()
 
 	r.Post(createNoteUrl, createNoteHandler)

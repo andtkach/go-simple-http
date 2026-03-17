@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.\\(go|mod|sum|Dockerfile|rest|md|sh\\)$\")",
+      "Bash(go -C server mod tidy)",
+      "Bash(go -C client mod tidy)",
+      "Bash(go -C server build .)",
+      "Bash(go -C client build .)"
+    ]
+  }
+}
